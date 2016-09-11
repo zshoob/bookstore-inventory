@@ -48,13 +48,17 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.username
 
+
 class Author(models.Model):
     # Relations
 
     # Attributes - Mandatory
-    name = models.CharField(max_length=40)
+    first_name = models.CharField(max_length=20)
+    last_name = models.CharField(max_length=20)
 
     # Attributes - Optional
+    middle_name = models.CharField(max_length=20, default='')
+
     # Object Manager
     objects = managers.AuthorManager
 
@@ -64,25 +68,30 @@ class Author(models.Model):
     def books(self):
         return self.book_set
 
+    @property
+    def name(self):
+        middle = ' %s' % self.middle_name if self.middle_name else ''
+        return '%s%s %s' % (self.first_name, self.middle_name, self.last_name)
+
+    @property
+    def search_name(self):
+        middle = ' %s' % self.middle_name if self.middle_name else ''
+        return '%s, %s%s' % (self.last_name, self.first_name, middle)
+
     # Methods
 
     # Meta and String
     class Meta:
         verbose_name = "Author"
         verbose_name_plural = "Authors"
-        # ordering = ("last_name",)
+        ordering = ("last_name",)
 
     def __str__(self):
         return self.name
 
 class Book(models.Model):
     # Relations
-    author = models.ForeignKey(
-        Author,
-        on_delete=models.SET_NULL,
-        blank=True,
-        null=True
-    )
+    authors = models.ManyToManyField(Author)
     # Attributes - Mandatory
     isbn = models.BigIntegerField(primary_key=True)
     title = models.CharField(max_length=100)
@@ -93,6 +102,10 @@ class Book(models.Model):
     objects = managers.BookManager()
 
     # Custom Properties
+    @property
+    def authors_string(self):
+        return ', '.join(self.authors.all())
+
 
     # Methods
 
@@ -104,6 +117,14 @@ class Book(models.Model):
 
     def __str__(self):
         return self.title
+
+def parse_authors(s):
+    from nameparser.parser import HumanName
+    names = [HumanName(n) for n in s.split(',')]
+    # format must be Stein, Clifford
+    if len(names) == 2 and not names[0].last:
+        names = HumanName(s)
+    return [dict(first_name=name.first, middle_name=name.middle, last_name=name.last) for name in names]
 
 class EbayListing(models.Model):
     # Relations
@@ -120,6 +141,26 @@ class EbayListing(models.Model):
     @property
     def url(self):
         return 'http://www.ebay.com/itm/%i' % self.listing_id
+
+    @staticmethod
+    def scrape(listing_id):
+        data = EbayScraper().scrape(listing_id)
+        book = Book(
+            isbn=data['isbn']
+        )
+        book.save()
+        for a_dict in parse_authors(data['authors']):
+            author = Author(**a_dict)
+            author.save()
+            book.authors.add(author)
+        listing = EbayListing(
+            book=book,
+            listing_id=listing_id
+        )
+        listing.save()
+        current_price = EbayPrice(listing=listing, price=data['price'])
+        current_price.save()
+        return listing
 
     # Methods
     # Meta and String
@@ -142,24 +183,6 @@ class EbayPrice(models.Model):
     def __str__(self):
         return "$%f.2" % price
 
-def scrape_ebay(listing_id):
-    data = EbayScraper().scrape(listing_id)
-    author = Author(name=data['Overview']['author'])
-    author.save()
-    book = Book(
-        isbn=data['Overview']['isbn'],
-        author=author
-    )
-    book.save()
-    listing = EbayListing(
-        book=book,
-        listing_id=listing_id
-    )
-    listing.save()
-    for p in data['Prices']:
-        price = EbayPrice(listing=listing, price=p['price'])
-        price.save()
-    return listing
 
 from django.dispatch import receiver
 from django.db.models.signals import post_save

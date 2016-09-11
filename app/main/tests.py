@@ -5,6 +5,8 @@ from django.contrib.auth import get_user_model
 from . import models
 from .scrapers.ebay import EbayScraper
 
+ebay = EbayScraper()
+
 class TestProfileModel(TestCase):
     def test_profile_creation(self):
         User = get_user_model()
@@ -34,13 +36,18 @@ class TestProfileModel(TestCase):
 #         self.assertEqual(book.author.name, 'Asimov, Isaac')
 
 class TestEbayScraper(TestCase):
+    def test_scraper_output(self):
+        listing = ebay.scrape(311459830589)
+        for attrib in ['category', 'shipping', 'specifics', 'isbn', 'location', 'title', 'price', 'updated', 'condition', 'details', 'authors']:
+            self.assertTrue(attrib in listing)
+
     def test_listing_creation(self):
         # ebay = EbayScraper()
         # data = ebay.scrape(311459830589)
         # self.assertTrue('Prices' in data)
         # price = data['Prices'][0]['price']
         # self.assertEqual(price, 19.61)
-        listing = models.scrape_ebay(311459830589)
-        self.assertEqual(listing.listing_id, 311459830589)
-        update = models.scrape_ebay(311459830589)
-        self.assertEqual(listing.listing_id, update.listing_id)
+        listing = models.EbayListing.scrape(311459830589)
+        book = listing.book
+        author = book.authors.first()
+        self.assertEqual(author.name, 'Liu, Cixin')

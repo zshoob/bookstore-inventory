@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[108]:
+# In[181]:
 
 from scraper import *
 import itertools
@@ -33,9 +33,8 @@ class EbayScraper(Scraper):
         location = re.sub('[\w ]+:', '', read_text(location_elem))
         condition_elem = listing.xpath('.//div[@class="u-flL condText  "]')[0]
         condition = read_text(condition_elem)
-        prices = [dict(listing_id=listing_id, price=price)]
 
-        author = ''
+        authors = ''
         isbn = None
         
         specifics_data = []
@@ -44,54 +43,56 @@ class EbayScraper(Scraper):
             key = re.sub(':','', read_text(key_elem))
             value = read_text(key_elem.getnext())
             if key == 'Author':
-                author = value
+                authors = value
             elif key == 'ISBN-13':
                 isbn = value
             specifics_data.append(dict(listing_id=listing_id, key=key, value=value))
 
-        detailed = listing.xpath(".//div[@class='prodDetailDesc']")[0]
         detailed_data = []
-        pairs = []
-        category = ''
-        for row in detailed.xpath(".//tr"):
-            cat_elem = row.xpath("./td/font/b")
-            if cat_elem:
-                category = clean_str(cat_elem[0].text_content())
-            elif category > '':
-                tds = [clean_str(td.text_content()) for td in row.xpath("./td")]
-                if len(tds) == 2:
-                    k, v = [clean_str(td.text_content()) for td in row.xpath("./td")]
-                else:
-                    k, v = category, tds[0]
-                if v:
-                    detailed_data.append(dict(listing_id=listing_id, category=category, key=k, value=v))
-                if k == 'Author':
-                    author = v
-                elif k == 'ISBN-13':
-                    isbn = v
+        detailed = listing.xpath(".//div[@class='prodDetailDesc']")
+        if detailed:
+            detailed = detailed[0]
+            detailed_data = []
+            pairs = []
+            category = ''
+            for row in detailed.xpath(".//tr"):
+                cat_elem = row.xpath("./td/font/b")
+                if cat_elem:
+                    category = clean_str(cat_elem[0].text_content())
+                elif category > '':
+                    tds = [clean_str(td.text_content()) for td in row.xpath("./td")]
+                    if len(tds) == 2:
+                        k, v = [clean_str(td.text_content()) for td in row.xpath("./td")]
+                    else:
+                        k, v = category, tds[0]
+                    if v:
+                        detailed_data.append(dict(listing_id=listing_id, category=category, key=k, value=v))
+                    if k == 'Author':
+                        authors = v
+                    elif k == 'ISBN-13':
+                        isbn = v
 
         shipping_costs = [read_num(read_text(span)) or 0.0 for span in listing.xpath('.//span[@id="fshippingCost"]')]
         shipping_types = [read_text(span) for span in listing.xpath('.//span[@id="fshippingSvc"]')]
         shipping_data = [dict(listing_id=listing_id, cost=cost, kind=kind) for cost, kind in zip(shipping_costs, shipping_types)]
 
-        listing_data = dict(listing_id=listing_id,
-                     title=title,
-                     isbn=isbn,
-                     author=author,
-                     price=price,
-                     location=location,
-                     condition=condition,
-                     category=category,
-                     updated=today())
-        
         return {
-            'Overview': listing_data,
-            'Prices': prices,
-            'Specifics': specifics_data,
-            'Details': detailed_data,
-            'Shipping': shipping_data
+            'title': title,
+            'isbn': isbn,
+            'authors': authors,
+            'price': price,
+            'location': location,
+            'condition': condition,
+            'category': category,
+            'specifics': specifics_data,
+            'details': detailed_data,
+            'shipping': shipping_data,
+            'updated': today()
         }
     
     def scrape(self, listing_id):
         return self.read(self.get(listing_id))
+    
+def scrape(listing_id):
+    return EbayScraper().scrape(listing_id)
 
