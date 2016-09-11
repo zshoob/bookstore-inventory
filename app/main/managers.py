@@ -10,3 +10,6 @@ class BookManager(models.Manager):
 
 class AuthorManager(models.Manager):
     pass
+
+class EbayListingManager(models.Manager):
+    pass
