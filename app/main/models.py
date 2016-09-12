@@ -57,7 +57,7 @@ class Author(models.Model):
     last_name = models.CharField(max_length=20)
 
     # Attributes - Optional
-    middle_name = models.CharField(max_length=20, default='')
+    middle_name = models.CharField(max_length=20, null=True, blank=True)
 
     # Object Manager
     objects = managers.AuthorManager
@@ -91,7 +91,7 @@ class Author(models.Model):
 
 class Book(models.Model):
     # Relations
-    authors = models.ManyToManyField(Author)
+    authors = models.ManyToManyField(Author, blank=True)
     # Attributes - Mandatory
     isbn = models.BigIntegerField(primary_key=True)
     title = models.CharField(max_length=100)
@@ -132,6 +132,7 @@ class EbayListing(models.Model):
 
     # Attributes - Mandatory
     listing_id = models.BigIntegerField(primary_key=True)
+    title = models.CharField(max_length=100, blank=True)
 
     # Attributes - Optional
     # Object Manager
@@ -155,7 +156,8 @@ class EbayListing(models.Model):
             book.authors.add(author)
         listing = EbayListing(
             book=book,
-            listing_id=listing_id
+            listing_id=listing_id,
+            title=data.get('title', '')
         )
         listing.save()
         current_price = EbayPrice(listing=listing, price=data['price'])

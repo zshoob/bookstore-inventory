@@ -12,6 +12,12 @@ class ProfileAdmin(admin.ModelAdmin):
 
 @admin.register(models.Book)
 class Book(admin.ModelAdmin):
-    list_display = ("isbn", "title", "authors_string")
+    list_display = ("isbn", "title")
 
     search_fields = ["book__authors"]
+
+@admin.register(models.Author)
+class Author(admin.ModelAdmin):
+    list_display = ("first_name", "last_name")
+
+    search_fields = ("first_name", "last_name")

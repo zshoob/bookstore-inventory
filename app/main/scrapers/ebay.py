@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[181]:
+# In[192]:
 
 from scraper import *
 import itertools
@@ -10,13 +10,14 @@ class EbayScraper(Scraper):
     def __init__(self):
         super(EbayScraper, self).__init__()
         self.cache = {}
-    
-    def get(self, listing_id, nocache=False):        
-        assert read_num(listing_id)
-        cached = not nocache and self.cache.get(listing_id)
-        response = cached or requests.get('http://www.ebay.com/itm/%i' % listing_id)
+
+    def get(self, url, nocache=False):
+        if isinstance(url, int) or re.match('\d{12}', url):
+            url = 'http://www.ebay.com/itm/%s' % url
+        cached = not nocache and self.cache.get(url)
+        response = cached or requests.get(url)
         if not nocache:
-            self.cache[listing_id] = response
+            self.cache[url] = response
         return response
 
     def read(self, page, listing_id=None, verbose=0):
@@ -36,7 +37,7 @@ class EbayScraper(Scraper):
 
         authors = ''
         isbn = None
-        
+
         specifics_data = []
         specifics = listing.xpath('.//div[@class="itemAttr"]')[0]
         for key_elem in specifics.xpath('.//td[@class="attrLabels"]'):
@@ -87,12 +88,11 @@ class EbayScraper(Scraper):
             'specifics': specifics_data,
             'details': detailed_data,
             'shipping': shipping_data,
-            'updated': today()
+            'updated': today().strftime("%Y-%m-%d %X")
         }
-    
+
     def scrape(self, listing_id):
         return self.read(self.get(listing_id))
-    
+
 def scrape(listing_id):
     return EbayScraper().scrape(listing_id)
-
