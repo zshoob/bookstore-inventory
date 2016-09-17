@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[192]:
+# In[214]:
 
 from scraper import *
 import itertools
@@ -28,7 +28,7 @@ class EbayScraper(Scraper):
         title = re.sub('Details about','', clean_str(listing.xpath('.//h1[@id="itemTitle"]')[0].text_content()))
         if verbose:
             report('%s %s' % (listing_id, title))
-        price_elem = listing.xpath('.//span[@id="prcIsum"]')[0]
+        price_elem = listing.xpath('.//span[@id="prcIsum" or @id="prcIsum_bidPrice"]')[0]
         price = read_num(price_elem.text_content())
         location_elem = listing.xpath('.//div[@id="itemLocation"]')[0]
         location = re.sub('[\w ]+:', '', read_text(location_elem))

@@ -2,7 +2,7 @@
 from django.shortcuts import render
 from django import http
 import json
-from .main.models import EbayListing
+from .main.models import EbayListing, Book
 import re
 
 def home(request):
@@ -11,8 +11,11 @@ def home(request):
 def home_files(request, filename):
     return render(request, filename, {}, content_type="text/plain")
 
-def scrape(request, href):
-    listing_id = re.search('\d{12}', href).group(0)
+def scrape(request, listing_id):
+    assert int(listing_id)
     listing = EbayListing.scrape(listing_id)
     response = http.HttpResponse(listing.title, content_type='application/json')
     return response
+
+def books(request):
+    return render(request, "app/books.html", {'books': Book.objects.all()})

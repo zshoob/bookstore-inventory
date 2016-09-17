@@ -48,7 +48,6 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.username
 
-
 class Author(models.Model):
     # Relations
 
@@ -57,7 +56,7 @@ class Author(models.Model):
     last_name = models.CharField(max_length=20)
 
     # Attributes - Optional
-    middle_name = models.CharField(max_length=20, null=True, blank=True)
+    middle_name = models.CharField(max_length=20, default='', blank=True)
 
     # Object Manager
     objects = managers.AuthorManager
@@ -71,7 +70,7 @@ class Author(models.Model):
     @property
     def name(self):
         middle = ' %s' % self.middle_name if self.middle_name else ''
-        return '%s%s %s' % (self.first_name, self.middle_name, self.last_name)
+        return '%s%s %s' % (self.first_name, middle, self.last_name)
 
     @property
     def search_name(self):
@@ -85,6 +84,7 @@ class Author(models.Model):
         verbose_name = "Author"
         verbose_name_plural = "Authors"
         ordering = ("last_name",)
+        unique_together = (('first_name','last_name'))
 
     def __str__(self):
         return self.name
@@ -104,7 +104,7 @@ class Book(models.Model):
     # Custom Properties
     @property
     def authors_string(self):
-        return ', '.join(self.authors.all())
+        return ', '.join([a.name for a in self.authors.all()])
 
 
     # Methods
@@ -116,7 +116,7 @@ class Book(models.Model):
         ordering = ("title",)
 
     def __str__(self):
-        return self.title
+        return self.title.encode('ascii', 'ignore')
 
 def parse_authors(s):
     from nameparser.parser import HumanName
@@ -143,15 +143,18 @@ class EbayListing(models.Model):
     def url(self):
         return 'http://www.ebay.com/itm/%i' % self.listing_id
 
+    @property
+    def authors(self):
+        return ', '.join([a.name for a in self.book.authors.all()])
+
     @staticmethod
     def scrape(listing_id):
         data = EbayScraper().scrape(listing_id)
-        book = Book(
-            isbn=data['isbn']
-        )
+        book = Book.objects.get_or_create(isbn=data['isbn'])[0]
+        book.title = book.title or data.get('title')
         book.save()
         for a_dict in parse_authors(data['authors']):
-            author = Author(**a_dict)
+            author = Author.objects.get_or_create(**a_dict)[0]
             author.save()
             book.authors.add(author)
         listing = EbayListing(

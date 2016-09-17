@@ -7,14 +7,6 @@ import pandas as pd
 import time
 import dateutil
 import traceback
-from nameparser.parser import HumanName
-
-def parse_authors(s):
-    names = [HumanName(n) for n in s.split(',')]
-    # format must be Stein, Clifford
-    if len(names) == 2 and not names[0].last:
-        names = HumanName(s)
-    return [dict(first_name=name.first, middle_name=name.middle, last_name=name.last) for name in names]
 
 def today():
     return datetime.date.today()

@@ -28,12 +28,12 @@ class TestBookModel(TestCase):
             title='Foundation'
         )
         book.save()
-        author = models.Author(first_name='Isaac', last_name='Asimov')
+        author = models.Author(first_name='Isaac', last_name='Asimov', middle_name="J.")
         author.save()
         book.authors.add(author)
         self.assertIsInstance(book.authors.first(), models.Author)
         self.assertIsInstance(author.books.first(), models.Book)
-        self.assertEqual(book.authors.first().name, 'Isaac Asimov')
+        self.assertEqual(book.authors.first().name, 'Isaac J. Asimov')
 
 # class TestEbayScraper(TestCase):
 #     def test_scraper_output(self):

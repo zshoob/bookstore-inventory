@@ -15,13 +15,14 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
-from .views import home, home_files, scrape
+from .views import home, home_files, scrape, books
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^$', home, name='home'),
     url(r'^(?P<filename>(robots.txt)|(humans.txt))$',
             home_files, name='home-files'),
-    url(r'^scrape/(?P<href>.{,100})$', scrape, name='scrape'),
+    url(r'^scrape/.*(?P<listing_id>\d{12})', scrape, name='scrape'),
+    url(r'^books/', books, name='books'),
     url(r'^accounts/', include('allauth.urls')),
 ]
