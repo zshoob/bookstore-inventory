@@ -9,12 +9,12 @@ class ProfileAdmin(admin.ModelAdmin):
 
     search_fields = ["user__username"]
 
-@admin.register(models.Book)
-class Book(admin.ModelAdmin):
-
-    list_display = ("isbn", "title", 'authors_string')
-
-    search_fields = ["authors__last_name", "authors__first_name"]
+# @admin.register(models.Book)
+# class Book(admin.ModelAdmin):
+#
+#     list_display = ("isbn", "title", 'authors_string')
+#
+#     search_fields = ["authors__last_name", "authors__first_name"]
 
 @admin.register(models.Author)
 class Author(admin.ModelAdmin):

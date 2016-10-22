@@ -165,3 +165,33 @@ ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "none"
 SOCIALACCOUNT_QUERY_EMAIL = True
 LOGIN_REDIRECT_URL = "/"
+
+
+# LOG_DIR = os.path.join(PROJECT_ROOT, '..', 'log')
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {  # Log to stdout
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+        },
+        # 'file': {
+        #     'level': 'DEBUG',
+        #     'class': 'logging.FileHandler',
+        #     'filename': os.path.join(LOG_DIR, 'django_debug.log'),
+        # }
+    },
+    'root': {  # For dev, show errors + some info in the console
+        'handlers': ['console'],
+        'level': 'INFO',
+    },
+    # 'loggers': {
+    #     'django.request': {  # debug logging of things that break requests
+    #         'handlers': ['file'],
+    #         'level': 'DEBUG',
+    #         'propagate': True,
+    #     },
+    # },
+}

@@ -15,14 +15,17 @@ Including another URLconf
 """
 from django.conf.urls import url, include
 from django.contrib import admin
-from .views import home, home_files, scrape, books
+import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^$', home, name='home'),
+    url(r'^$', views.home, name='home'),
     url(r'^(?P<filename>(robots.txt)|(humans.txt))$',
-            home_files, name='home-files'),
-    url(r'^scrape/.*(?P<listing_id>\d{12})', scrape, name='scrape'),
-    url(r'^books/', books, name='books'),
+            views.home_files, name='home-files'),
+    url(r'^scrape/.*(?P<listing_id>\d{12})', views.scrape, name='scrape'),
+    url(r'^books/', views.Book.plural_view(), name='books'),
+    url(r'^book/(?P<pk>\d+)', views.Book.singular_view(), name='book'),
+    url(r'^ebaylistings/(?P<pk>\d+)', views.EbayListingDetail.as_view(), name='ebay-listing'),
+    url(r'^ebaylistings/', views.EbayListingList.as_view(), name='ebay-listings'),
     url(r'^accounts/', include('allauth.urls')),
 ]

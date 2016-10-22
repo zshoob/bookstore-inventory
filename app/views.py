@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
 from django.shortcuts import render
 from django import http
+from django.views.generic.list import ListView
+from django.views.generic.detail import DetailView
 import json
-from .main.models import EbayListing, Book
+from main import models
 import re
+import sys
+
 
 def home(request):
     return render(request, "app/index.html", {})
@@ -13,9 +17,100 @@ def home_files(request, filename):
 
 def scrape(request, listing_id):
     assert int(listing_id)
-    listing = EbayListing.scrape(listing_id)
+    listing = models.EbayListing.scrape(listing_id)
     response = http.HttpResponse(listing.title, content_type='application/json')
     return response
 
-def books(request):
-    return render(request, "app/books.html", {'books': Book.objects.all()})
+
+class ModelView:
+    def __init__(self, model):
+        self.model = model
+        self.meta = model._meta
+        self.singular_name = self.meta.object_name.lower().replace(' ','')
+        self.plural_name = self.meta.verbose_name_plural.lower().replace(' ','')
+
+    def plural_view(self):
+        def view(request):
+            return render(request, "app/%s.html" % self.plural_name, {
+                'meta': self.meta,
+                'data': self.model.objects.all(),
+                'list_display': self.plural_display_columns,
+            })
+        return view
+
+    def singular_view(self):
+        def view(request, pk):
+            return render(request, "app/%s.html" % (self.singular_name), {
+                'meta': self.meta,
+                'data': self.model.objects.filter(pk=pk),
+                'list_display': self.singular_display_columns,
+            })
+        return view
+
+def register_model(model):
+    def make_view(options):
+        view = ModelView(model)
+        view.plural_display_columns = options.plural_display_columns
+        view.singular_display_columns = options.singular_display_columns
+        return view
+    return make_view
+
+@register_model(models.Book)
+class Book:
+    plural_display_columns = ('title', 'authors_display')
+    singular_display_columns = ('title',)
+
+# @register_model(models.EbayListing)
+# class EbayListing:
+#     plural_display_columns = ('book','title','authors')
+#     singular_display_columns = ('title','authors','condition','book_format','publication_date','language','synopsis')
+
+urlpatterns = []
+
+class BookStoreViewMixin:
+    def get_path_from_name(self, name):
+        return re.sub('[\s\_]+','',name).lower()
+
+    def get_bookstore_context(self):
+        context = {
+            'list_display': self.list_display,
+            'pk_name': self.model._meta.pk.name,
+            'detail_name': self.model._meta.verbose_name,
+            'list_name': self.model._meta.verbose_name_plural,
+            'detail_path': self.get_path_from_name(self.model._meta.verbose_name),
+            'list_path': self.get_path_from_name(self.model._meta.verbose_name_plural),
+        }
+        if hasattr(self, 'tools'):
+            context['tools'] = self.tools
+        return context
+
+class BookStoreDetailView(DetailView):
+    def get_context_data(self, **kwargs):
+        context = super(BookStoreDetailView, self).get_context_data(**kwargs)
+        context['pk'] = self.model._meta.pk
+        context.update(self.get_bookstore_context())
+        return context
+
+class BookStoreListView(ListView):
+    template_name = 'list.html'
+    def get_context_data(self, **kwargs):
+        context = super(BookStoreListView, self).get_context_data(**kwargs)
+        context['detail_name'] = self.model._meta.verbose_name.lower().replace(' ','')
+        context.update(self.get_bookstore_context())
+        return context
+
+class EbayListingDetail(BookStoreDetailView, BookStoreViewMixin):
+    model = models.EbayListing
+    template_name = 'app/ebay_detail.html'
+    list_display = ('title','authors','condition','synopsis','book_format')
+    tools = {
+        'update': scrape
+    }
+
+    def scrape(self, listing_id):
+        data = models.EbayListing.scrape(listing_id)
+
+
+class EbayListingList(BookStoreListView, BookStoreViewMixin):
+    model = models.EbayListing
+    list_display = ('title','authors','condition')

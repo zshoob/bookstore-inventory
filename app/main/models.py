@@ -3,6 +3,8 @@ import django
 from django.db import models
 from django.conf import settings
 import datetime
+import dateutil
+import common as cmn
 
 from . import managers
 from .scrapers.ebay import EbayScraper
@@ -15,6 +17,8 @@ from .scrapers.ebay import EbayScraper
     # Custom Properties
     # Methods
     # Meta and String
+
+
 
 class Profile(models.Model):
     # Relations
@@ -103,7 +107,7 @@ class Book(models.Model):
 
     # Custom Properties
     @property
-    def authors_string(self):
+    def authors_display(self):
         return ', '.join([a.name for a in self.authors.all()])
 
 
@@ -133,6 +137,12 @@ class EbayListing(models.Model):
     # Attributes - Mandatory
     listing_id = models.BigIntegerField(primary_key=True)
     title = models.CharField(max_length=100, blank=True)
+    condition = models.CharField(max_length=1000, blank=True, null=True)
+    book_format = models.CharField(max_length=100, blank=True, null=True)
+    publication_date = models.DateField(blank=True, null=True)
+    language = models.CharField(max_length=20, blank=True, null=True)
+    synopsis = models.CharField(max_length=5000, blank=True, null=True)
+    image_source = models.CharField(max_length=100, null=True)
 
     # Attributes - Optional
     # Object Manager
@@ -153,14 +163,20 @@ class EbayListing(models.Model):
         book = Book.objects.get_or_create(isbn=data['isbn'])[0]
         book.title = book.title or data.get('title')
         book.save()
-        for a_dict in parse_authors(data['authors']):
+        for a_dict in parse_authors(data.get('authors','')):
             author = Author.objects.get_or_create(**a_dict)[0]
             author.save()
             book.authors.add(author)
         listing = EbayListing(
             book=book,
             listing_id=listing_id,
-            title=data.get('title', '')
+            title=data.get('title', ''),
+            condition=data.get('condition'),
+            book_format=data.get('format'),
+            publication_date=cmn.clean_date(data.get('publication date')),
+            language=data.get('language'),
+            synopsis=data.get('synopsis'),
+            image_source=data.get('image_source')
         )
         listing.save()
         current_price = EbayPrice(listing=listing, price=data['price'])
@@ -169,6 +185,13 @@ class EbayListing(models.Model):
 
     # Methods
     # Meta and String
+    class Meta:
+        verbose_name = "Ebay Listing"
+        verbose_name_plural = "Ebay Listings"
+        ordering = ("title",)
+
+    def __str__(self):
+        return self.title.encode('ascii', 'ignore')
 
 class EbayPrice(models.Model):
     # Relations
