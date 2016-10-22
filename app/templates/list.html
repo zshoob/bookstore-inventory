@@ -1,0 +1,30 @@
+{% extends "datatable.html" %}
+{% load staticfiles %}
+{% load datatable %}
+
+
+{% block body_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/datatable.css' %}" />
+{% endblock %}
+
+
+{% block content %}
+<table>
+<thead>
+  <th>{{ pk_name }}</th>
+  {% for col in list_display %}
+  <th>{{ col }}</th>
+  {% endfor %}
+</thead>
+{% for object in object_list %}
+<tr>
+  <td><a href="/{{ list_path }}/{{ object.pk }}">{{ object.pk }}</a></td>
+  {% for col in list_display %}
+  <td>
+    {{ object | get_field:col }}
+  </td>
+  {% endfor %}
+</tr>
+{% endfor %}
+</table>
+{% endblock %}

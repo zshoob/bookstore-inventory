@@ -1,0 +1,7 @@
+{% extends "detail.html" %}
+
+{% block nav_tools %}
+{% for name, tool in tools.items %}
+ <a style='color:white' href="/{{list_path}}/{{name}}/{{object.pk}}">{{name}}</a>
+{% endfor %}
+{% endblock %}

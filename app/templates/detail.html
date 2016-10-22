@@ -1,0 +1,19 @@
+{% extends "datatable.html" %}
+{% load staticfiles %}
+{% load datatable %}
+
+{% block nav_parent %}{{ list_path }}{% endblock %}
+
+{% block content %}
+{% if object.image_source %}
+<div><img src={{object.image_source}}></img></td></div>
+{% endif %}
+<table>
+{% for col in list_display %}
+<tr>
+  <td>{{ col }}</td>
+  <td>{{ object | get_field:col }}</td>
+</tr>
+{% endfor %}
+</table>
+{% endblock %}
