@@ -1,6 +1,12 @@
 import dateutil
 import re
 
+def today():
+    return datetime.date.today()
+
+def now():
+    return datetime.datetime.now()
+
 def clean_date(x, default=None):
     try:
         return dateutil.parser.parse(x)
@@ -18,3 +24,11 @@ def read_num(s):
         return float(n[0])
     except IndexError, ValueError:
         return None
+
+def parse_authors(s):
+    from nameparser.parser import HumanName
+    names = [HumanName(n) for n in s.split(',')]
+    # format must be Stein, Clifford
+    if len(names) == 2 and not names[0].last:
+        names = [HumanName(s)]
+    return [name.as_dict() for name in names]

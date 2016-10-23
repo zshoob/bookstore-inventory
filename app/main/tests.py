@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from . import models
 from .scrapers.ebay import EbayScraper
+from .scrapers.amazon import ProductFundamentals
 
 ebay = EbayScraper()
 
@@ -34,6 +35,8 @@ class TestBookModel(TestCase):
         self.assertIsInstance(book.authors.first(), models.Author)
         self.assertIsInstance(author.books.first(), models.Book)
         self.assertEqual(book.authors.first().name, 'Isaac J. Asimov')
+
+
 
 # class TestEbayScraper(TestCase):
 #     def test_scraper_output(self):

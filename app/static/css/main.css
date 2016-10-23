@@ -1,3 +1,10 @@
 .jumbotron h1 {
-    color: rgba(200, 50, 255, 1);
+  color: rgba(200, 50, 255, 1);
+}
+
+.search input {
+  padding-top: 0;
+  background-color: #333;
+  color: #9d9d9d;
+  border: gray;
 }

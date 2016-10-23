@@ -6,14 +6,16 @@
 
 {% block content %}
 {% if object.image_source %}
-<div><img src={{object.image_source}}></img></td></div>
+<div style="float:left;margin:20px"><img src={{object.image_source}}></img></td></div>
 {% endif %}
-<table>
-{% for col in list_display %}
-<tr>
-  <td>{{ col }}</td>
-  <td>{{ object | get_field:col }}</td>
-</tr>
-{% endfor %}
-</table>
+<div class="right-column" style="float:left;margin:20px">
+  <table style="width:100%">
+  {% for col in list_display %}
+  <tr>
+    <td>{{ col }}</td>
+    <td>{{ object | get_field:col }}</td>
+  </tr>
+  {% endfor %}
+  </table>
+</div>
 {% endblock %}

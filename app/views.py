@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from django.shortcuts import render
-from django import http
+from django import http, forms
 from django.views.generic.list import ListView
 from django.views.generic.detail import DetailView
+from django.conf.urls import url, include
 import json
 from main import models
 import re
@@ -82,6 +83,7 @@ class BookStoreViewMixin:
         }
         if hasattr(self, 'tools'):
             context['tools'] = self.tools
+
         return context
 
 class BookStoreDetailView(DetailView):
@@ -114,3 +116,41 @@ class EbayListingDetail(BookStoreDetailView, BookStoreViewMixin):
 class EbayListingList(BookStoreListView, BookStoreViewMixin):
     model = models.EbayListing
     list_display = ('title','authors','condition')
+
+class AmazonProductList(BookStoreListView, BookStoreViewMixin):
+    model = models.AmazonProduct
+    list_display = ('title','authors','binding')
+
+
+def fetch_from_amazon(request, asin):
+    models.AmazonProduct.fetch(asin)
+    return http.HttpResponseRedirect('/amazonproducts/%s' % asin)
+
+class SearchForm(forms.Form):
+    term = forms.CharField(label='Search', initial='', max_length=100)
+
+class AmazonProductDetail(BookStoreDetailView, BookStoreViewMixin):
+    model = models.AmazonProduct
+    template_name = 'app/amazon_detail.html'
+    list_display = ('title','authors','binding','edition','pages','published','released')
+
+
+def search_amazon(request):
+    # if this is a POST request we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = SearchForm(request.POST)
+        # check whether it's valid:
+        if form.is_valid():
+            # process the data in form.cleaned_data as required
+            # ...
+            # redirect to a new URL:
+            term = form.cleaned_data['term']
+            asin = models.AmazonProduct.fetch(term)
+            return http.HttpResponseRedirect('/amazonproducts/%s' % asin)
+
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = SearchForm()
+
+    return render(request, 'app/search.html', {'form': form})

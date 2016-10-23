@@ -28,3 +28,7 @@ class EbayListing(admin.ModelAdmin):
 
     def update(self, obj):
         models.EbayListing.scrape(obj.listing_id)
+
+# @admin.register(models.AmazonProduct)
+# class AmazonProduct(admin.ModelAdmin):
+#     list_display = ("asin", "title")
