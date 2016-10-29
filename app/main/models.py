@@ -200,6 +200,23 @@ class EbayPrice(models.Model):
     def __str__(self):
         return "$%f.2" % price
 
+class AmazonProductCategory(models.Model):
+    product_category_id = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=100, null=True, blank=True)
+    parent = models.IntegerField(null=True)
+
+    @staticmethod
+    def fetch(asin):
+        from scrapers.amazon import ProductCategoriesForASIN
+        loader = ProductCategoriesForASIN()
+        data = loader.fetch(asin)
+        for row in data:
+            category = AmazonProductCategory(
+                product_category_id = row.get('ProductCategoryId'),
+                name = row.get('ProductCategoryName'),
+                parent = row.get('Parent')
+            )
+            category.save()
 
 class AmazonProduct(models.Model):
     # Relations
@@ -220,8 +237,8 @@ class AmazonProduct(models.Model):
 
     @staticmethod
     def fetch(asin):
-        from scrapers.amazon import ProductFundamentals, ProductsForQuery
-        results = ProductsForQuery().fetch(asin)
+        from scrapers.amazon import ProductFundamentals#, ProductsForQuery
+        results = ProductFundamentals().fetch(asin)
         for result in results:
             product = AmazonProduct(
                 asin=result.get('asin'),
@@ -238,12 +255,23 @@ class AmazonProduct(models.Model):
             )
             product.save()
             for rank_item in result['sales_rank']:
-                rank = AmazonSalesRank(
-                    product=product,
-                    category_id=rank_item.get('ProductCategoryId'),
-                    rank=rank_item.get('Rank')
-                )
-                rank.save
+                category_id = rank_item.get('ProductCategoryId')
+                if category_id == 'book_display_on_website':
+                    continue
+                else:
+                    category_id = cmn.read_num(category_id)
+                    try:
+                        category = AmazonProductCategory.objects.get(product_category_id=category_id)
+                    except django.core.exceptions.ObjectDoesNotExist:
+                        AmazonProductCategory.fetch(asin)
+                        category = AmazonProductCategory.objects.get(product_category_id=category_id)
+                    rank = AmazonSalesRank(
+                        product=product,
+                        product_category=category,
+                        rank=rank_item.get('Rank')
+                    )
+                    rank.save()
+                rank.save()
             for author_str in result.get('authors'):
                 author_dict = cmn.parse_authors(author_str)[0]
                 author, _ = Author.objects.get_or_create(
@@ -265,16 +293,10 @@ class AmazonProduct(models.Model):
         ordering = ("title",)
 
 class AmazonSalesRank(models.Model):
-    # Relations
     product = models.ForeignKey(AmazonProduct, on_delete=models.CASCADE)
-    # Attributes - Mandatory
-    category_id = models.IntegerField(null=True)
+    product_category = models.ForeignKey(AmazonProductCategory, on_delete=models.CASCADE)
     rank = models.IntegerField()
-    # Attributes - Optional
-    # Object Manager
-    # Custom Properties
-    # Methods
-    # Meta and String
+
 
 class AmazonPrice(models.Model):
     # Relations
@@ -310,3 +332,7 @@ def create_profile_for_new_user(sender, created, instance, **kwargs):
     if created:
         profile = Profile(user=instance)
         profile.save()
+
+
+if __name__ == '__main__':
+    AmazonProductCategory.fetch('0553293354')

@@ -12,7 +12,7 @@
   <table style="width:100%">
   {% for col in list_display %}
   <tr>
-    <td>{{ col }}</td>
+    <td>{{ col|upper }}</td>
     <td>{{ object | get_field:col }}</td>
   </tr>
   {% endfor %}

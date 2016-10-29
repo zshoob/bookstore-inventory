@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[29]:
+# In[135]:
 
 import requests
 from urllib import urlencode
@@ -208,14 +208,29 @@ class LowestPricedOffers(AmazonEndpoint):
             summary = self.read_summary(summary)
         return dict(offers=offers, summary=summary)
 
-class ProductCategories(AmazonEndpoint):
+class ProductCategoriesForASIN(AmazonEndpoint):
     def get_params(self, asin):
         params = self.universal_params.copy()
         params['Action'] = 'GetProductCategoriesForASIN'
         params['ASIN'] = asin
         return params
+    
+    def read(self, response):
+        xml = xmltodict.parse(response.text)
+        categories = []
+        lists = atleast_1d(traverse(xml, 'GetProductCategoriesForASINResponse/GetProductCategoriesForASINResult/Self'))
+        for prev in lists:    
+            node = traverse(prev, 'Parent')
+            while node:
+                prev['Parent'] = node['ProductCategoryId']
+                categories.append(prev)
+                prev = node
+                node = traverse(node, 'Parent')
+            prev['Parent'] = None
+            categories.append(prev)
+        return categories
 
-class ProductsForQuery(ProductFundamentals):
+class ListMatchingProducts(ProductFundamentals):
     action = 'ListMatchingProducts'
     def get_params(self, query):
         params = self.universal_params.copy()
@@ -223,8 +238,10 @@ class ProductsForQuery(ProductFundamentals):
         params['QueryContextId'] = 'Books'
         params['Query'] = query
         return params
-
+    
+    
 clrs = '0262033844'
 three_body = '0765382032'
 gott = '1594634025'
 foundation = '0553293354'
+
