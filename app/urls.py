@@ -28,8 +28,10 @@ urlpatterns = [
     url(r'^ebaylistings/(?P<pk>\d+)', views.EbayListingDetail.as_view(), name='ebay-listing'),
     url(r'^ebaylistings/', views.EbayListingList.as_view(), name='ebay-listings'),
     # url(r'^amazonproducts/fetch/(?P<asin>\w+)', views.fetch_from_amazon),
-    url(r'^amazonproducts/(?P<pk>\w+)', views.AmazonProductDetail.as_view(), name='amazon-product'),
+    url(r'^amazonproducts/(?P<pk>\w+)', views.NewAmazonProductDetail.as_view(), name='amazon-product'),
     url(r'^amazonproducts/', views.AmazonProductList.as_view(), name='amazon-products'),
+    url(r'^amazonoffers/', views.AmazonOfferList.as_view(), name='amazon-offers'),
+    url(r'^salesranks/', views.sales_rank_list, name='sales-ranks'),
     url(r'^accounts/', include('allauth.urls')),
     url('search/', views.search_amazon, name='search'),
 ]

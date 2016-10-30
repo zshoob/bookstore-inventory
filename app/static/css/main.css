@@ -8,3 +8,11 @@
   color: #9d9d9d;
   border: gray;
 }
+
+iframe {
+  border-style: solid;
+  border-top-width: 2px;
+  border-bottom-width: 2px;
+  border-left-width: 0px;
+  border-right-width: 0px;
+}

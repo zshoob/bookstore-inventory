@@ -170,12 +170,17 @@ class LowestPricedOffers(AmazonEndpoint):
             '@condition': 'Condition',
             '@fulfillmentChannel': 'FulfillmentChannel'
         }, inplace=True)
-        lowest_prices[['LandedPrice','ListingPrice','Shipping']] = lowest_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
+        def get_amount(d):
+            try:
+                return d['Amount']
+            except TypeError:
+                return d
+        lowest_prices[['LandedPrice','ListingPrice','Shipping']] = lowest_prices[['LandedPrice','ListingPrice','Shipping']].applymap(get_amount)
         lowest_prices = lowest_prices.to_dict(orient='records')
 
         buybox_prices = pd.DataFrame(traverse(summary, 'BuyBoxPrices/BuyBoxPrice'))
         buybox_prices.rename(columns={'@condition':'Condition'}, inplace=True)
-        buybox_prices[['LandedPrice','ListingPrice','Shipping']] = buybox_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
+        buybox_prices[['LandedPrice','ListingPrice','Shipping']] = buybox_prices[['LandedPrice','ListingPrice','Shipping']].applymap(get_amount)
         buybox_prices = buybox_prices.to_dict(orient='records')
 
         buybox_eligible_offers = pd.DataFrame(traverse(summary, 'BuyBoxEligibleOffers/OfferCount'))
@@ -214,12 +219,12 @@ class ProductCategoriesForASIN(AmazonEndpoint):
         params['Action'] = 'GetProductCategoriesForASIN'
         params['ASIN'] = asin
         return params
-    
+
     def read(self, response):
         xml = xmltodict.parse(response.text)
         categories = []
         lists = atleast_1d(traverse(xml, 'GetProductCategoriesForASINResponse/GetProductCategoriesForASINResult/Self'))
-        for prev in lists:    
+        for prev in lists:
             node = traverse(prev, 'Parent')
             while node:
                 prev['Parent'] = node['ProductCategoryId']
@@ -238,10 +243,9 @@ class ListMatchingProducts(ProductFundamentals):
         params['QueryContextId'] = 'Books'
         params['Query'] = query
         return params
-    
-    
+
+
 clrs = '0262033844'
 three_body = '0765382032'
 gott = '1594634025'
 foundation = '0553293354'
-

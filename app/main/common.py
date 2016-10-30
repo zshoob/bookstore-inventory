@@ -2,9 +2,11 @@ import dateutil
 import re
 
 def today():
+    import datetime
     return datetime.date.today()
 
 def now():
+    import datetime
     return datetime.datetime.now()
 
 def clean_date(x, default=None):

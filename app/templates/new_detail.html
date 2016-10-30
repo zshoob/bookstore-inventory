@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% load staticfiles %}
+{% load datatable %}
+
+{% block body_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/datatable.css' %}" />
+{% endblock %}
+
+{% block head_title %}{{view.meta.verbose_name}}{% endblock %}
+{% block nav_title %}{{ view.meta.verbose_name_plural }}{% endblock %}

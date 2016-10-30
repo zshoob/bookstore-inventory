@@ -121,7 +121,6 @@ class AmazonProductList(BookStoreListView, BookStoreViewMixin):
     model = models.AmazonProduct
     list_display = ('title','authors','binding')
 
-
 def fetch_from_amazon(request, asin):
     models.AmazonProduct.fetch(asin)
     return http.HttpResponseRedirect('/amazonproducts/%s' % asin)
@@ -131,9 +130,15 @@ class SearchForm(forms.Form):
 
 class AmazonProductDetail(BookStoreDetailView, BookStoreViewMixin):
     model = models.AmazonProduct
-    template_name = 'app/amazon_detail.html'
+    template_name = 'app/new_amazon_detail.html'
     list_display = ('title','authors','binding','edition','pages','published','released')
 
+    def get_context_data(self, **kwargs):
+        context = super(AmazonProductDetail, self).get_context_data(**kwargs)
+        context.update({
+            'sales_rankings': self.model.sales_rankings
+        })
+        return context
 
 def search_amazon(request):
     # if this is a POST request we need to process the form data
@@ -154,3 +159,48 @@ def search_amazon(request):
         form = SearchForm()
 
     return render(request, 'app/search.html', {'form': form})
+
+class AmazonOfferList(ListView, BookStoreViewMixin):
+    # model = models.AmazonOffer
+    # queryset = models.AmazonOffer.objects.filter(product_id=)
+    template_name = "generic_list.html"
+    list_display = ('condition', 'price', 'shipping', 'is_fba', 'seller_rating', 'feedback_count')
+    table_name = "Offers"
+
+    def get_queryset(self):
+        pid = self.request.GET.get('product_id')
+        if pid:
+            return models.AmazonOffer.objects.filter(product_id=pid)
+        return models.AmazonOffer.objects.all()
+
+class NewAmazonProductDetail(DetailView):
+    model = models.AmazonProduct
+    template_name = 'app/new_amazon_detail.html'
+    list_display = ('title','authors','binding','edition','pages','published')
+
+    def offer_headers(self):
+        return models.AmazonOffer.list_display
+
+    def offers(self):
+        return models.AmazonOffer.objects.filter(product=self.get_object())
+
+    def meta(self):
+        return self.model._meta
+
+
+import django_tables2 as tables
+
+class AmazonSalesRankList(tables.Table):
+    class Meta:
+        model = models.AmazonSalesRank
+
+def sales_rank_list(request):
+    pid = request.GET.get('product_id')
+    if pid:
+        queryset = models.AmazonSalesRank.objects.filter(product_id=pid)
+    else:
+        queryset = models.AmazonSalesRank.objects.all()
+    # queryset = models.AmazonSalesRank.objects.all()
+    table = AmazonSalesRankList(queryset)
+    tables.RequestConfig(request).configure(table)
+    return render(request, 'simple_list.html', {'table': table})
