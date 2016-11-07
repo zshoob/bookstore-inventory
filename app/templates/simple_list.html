@@ -1,8 +1,16 @@
 {% load django_tables2 %}
 {% load staticfiles %}
-{% load datatable %}
 {% render_table table %}
 
 <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
 <link rel="stylesheet" href="{% static 'css/main.css' %}">
 <link rel="stylesheet" type="text/css" href="{% static 'css/datatable.css' %}" />
+
+<!-- <nav class="navbar navbar-inverse navbar-fixed-top table_name" role="navigation">
+  <div class="navbar-header container" style="height:5%;">
+    <div class="col-xs-3" style="height:100%;">
+      <a class="table_name_text" href="/{% block nav_parent %}#{% endblock %}">{{ verbose_name }}</a>
+    </div>
+    <div class="col-xs-8"></div>
+  </div>
+</nav> -->

@@ -2,6 +2,11 @@
 {% load staticfiles %}
 {% load datatable %}
 
+{% block body_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/datatable.css' %}" />
+<link rel="stylesheet" type="text/css" href="{% static 'css/amazon.css' %}" />
+{% endblock %}
+
 {% block nav_tools %}
 <form class="search" action="/search/" method="post">
     {% csrf_token %}
@@ -12,12 +17,57 @@
 {% endblock %}
 
 {% block content %}
-
-{% if object.image_source %}
-<div style="float:left;margin-left:1%;margin-left:0%;width:25%">
-  <img src={{object.image_source}} style="width:100%;height=100%"></img>
+<div class="leftColumn" style="float:left;margin-left:2%;margin-top:2%;width:32%;">
+  <div style="float:left;margin-top:2%;width:40%">
+    <img src={{object.image_source}} style="width:100%;height=100%"></img>
+  </div>
+  <div style="float:left;width:55%;margin-left:2%;margin-top:2%;">
+    <p style="font-size:16px;">{{ object.title }}</p>
+    {{ view.foo }}
+    {{ view.fees }}
+  </div>
+  <div style="float:left;width:55%;margin-left:2%;">
+    <p>{{ object.authors }}</p>
+    <ul style="list-style: none;padding: 0%;">
+      <li><b>{{ object.binding }}: </b>{{ object.pages }} pages</li>
+      <li><b>ASIN: </b>{{ object.asin }}</li>
+      <li><b>Published: </b>{{ object.published }}</li>
+      <li><b>Current Rank: </b>{{ view.rank }}</li>
+      <li><b>Min Price: </b>{{ view.min_price }}</li>
+    </ul>
+  </div>
 </div>
-{% endif %}
+<div class="centerColumn" style="float:left; width:64%; margin-left:2%; margin-top:3%">
+  <div style="float:left;width:49%">
+    <img src={{object.camel_price}} style="width:100%;height=100%"></img>
+  </div>
+  <div style="float:left;margin-top:2%;width:49%">
+    <img src={{object.camel_rank}} style="width:100%;height=100%"></img>
+  </div>
+</div>
+<div style="float:left;width:96%; margin-left: 2%;margin-right:2%;">
+  as of {{ view.offers_pivot.as_of }}
+  <table style="font-size:12px;">
+    <thead>
+      <tr>
+        {% for col in view.offers_pivot.headers %}
+          <td>{{ col|upper }}</td>
+        {% endfor %}
+      </tr>
+    </thead>
+    {% for row in view.offers_pivot.data %}
+    <tr>
+      {% for col in row %}
+        <td class="{% cycle odd even %}">{{ col }}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<iframe src="/feecalculator?asin={{object.asin}}&price=199" style="width:50%"</iframe>
+
+<!--
 <div class="right-column" style="float:left;width:75%;margin-right=0%">
   <table style="width:100%">
   {% for col in view.list_display %}
@@ -28,49 +78,10 @@
   {% endfor %}
   </table>
 </div>
+ -->
 
-
-<!-- <div class="right-column" style="float:left;width:75%">
-  <table style="width:100%">
-  <thead>
-    <th>SALES RANK</th>
-    <th>CATEGORY</th>
-  </thead>
-  {% for rank, category in object.sales_rankings %}
-  <tr>
-    <td>{{ rank }}</td><td>{{ category }}</td>
-  </tr>
-  {% endfor %}
-  </table>
-</div> -->
-
-
-<!-- <div class="right-column" style="float:left;margin:20px">
-  <table style="width:100%">
-  <thead>
-    {% for col in view.offer_headers %}
-    <th>{{col|upper}}</th>
-    {% endfor %}
-  </thead>
-  {% for offer in view.offers %}
-  <tr>
-    {% for col in offer.list_display %}
-    <td>{{ offer | get_field:col }}</td>
-    {% endfor %}
-  </tr>
-  {% endfor %}
-  </table>
-</div> -->
-
-<iframe src="/salesranks?product_id={{object.asin}}" style="width:75%"</iframe>
-<iframe src="/amazonoffers?product_id={{object.asin}}" style="width:75%"</iframe>
-<!--
-<div style="float:left;">
-  <iframe src="/salesranks?product_id={{object.asin}}" style="width:100%"</iframe>
-</div>
-
-<div style="float:left;">
-  <iframe src="/amazonoffers?product_id={{object.asin}}" style="width:100%"</iframe>
-</div> -->
+<!-- <iframe src="/salesranks?product_id={{object.asin}}" style="width:50%"</iframe> -->
+<!-- <iframe src="/amazonoffers?product_id={{object.asin}}" style="width:50%"</iframe> -->
+<!-- <iframe src="/amazonoffers?product_id={{object.asin}}" style="width:100%"</iframe> -->
 
 {% endblock %}

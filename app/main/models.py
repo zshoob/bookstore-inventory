@@ -2,9 +2,11 @@
 import django
 from django.db import models
 from django.conf import settings
+from django.db.models import Avg, Max, Min
 import datetime
 import dateutil
 import main.common as cmn
+import pandas as pd
 
 from . import managers
 from .scrapers.ebay import EbayScraper
@@ -272,15 +274,9 @@ class AmazonProduct(models.Model):
             product.save()
             for rank_item in result['sales_rank']:
                 category_id = rank_item.get('ProductCategoryId')
-                if category_id == 'book_display_on_website':
-                    continue
-                else:
-                    category_id = cmn.read_num(category_id)
-                    try:
-                        category = AmazonProductCategory.objects.get(product_category_id=category_id)
-                    except django.core.exceptions.ObjectDoesNotExist:
-                        AmazonProductCategory.fetch(asin)
-                        category = AmazonProductCategory.objects.get(product_category_id=category_id)
+                if category_id == 'Books':
+                    category = AmazonProductCategory.objects.get_or_create(product_category_id=1, name='Books')[0]
+                    category.save()
                     rank = AmazonSalesRank.objects.get_or_create(
                         product=product,
                         product_category=category,
@@ -288,7 +284,22 @@ class AmazonProduct(models.Model):
                     )[0]
                     rank.rank = rank_item.get('Rank')
                     rank.save()
-                rank.save()
+                    rank.save()
+                # else:
+                #     category_id = cmn.read_num(category_id)
+                #     try:
+                #         category = AmazonProductCategory.objects.get(product_category_id=category_id)
+                #     except django.core.exceptions.ObjectDoesNotExist:
+                #         AmazonProductCategory.fetch(asin)
+                #         category = AmazonProductCategory.objects.get(product_category_id=category_id)
+                # rank = AmazonSalesRank.objects.get_or_create(
+                #     product=product,
+                #     product_category=category,
+                #     date=cmn.today(),
+                # )[0]
+                # rank.rank = rank_item.get('Rank')
+                # rank.save()
+                # rank.save()
             for author_str in result.get('authors'):
                 author_dict = cmn.parse_authors(author_str)[0]
                 author, _ = Author.objects.get_or_create(
@@ -297,8 +308,7 @@ class AmazonProduct(models.Model):
                     last_name=author_dict['last']
                 )
                 product.author_set.add(author)
-        AmazonOffer.fetch(asin, True)
-        AmazonOffer.fetch(asin, False)
+        AmazonOffer.fetch(asin)
         return results and results[0].get('asin')
 
     def __str__(self):
@@ -312,10 +322,36 @@ class AmazonProduct(models.Model):
     def sales_rankings(self):
         return [(r.rank, r.product_category.inheritance_str()) for r in AmazonSalesRank.objects.filter(product=self)]
 
+    @property
+    def rank(self):
+        hist = AmazonSalesRank.objects.filter(product=self, product_category_id=1)
+        if hist:
+            return hist[0].rank
+        return None
+
+    @property
+    def min_price(self):
+        prices = AmazonOffer.objects.filter(product=self, used=True).aggregate(Min('price'))
+
+    @property
+    def camel_price(self):
+        return "http://charts.camelcamelcamel.com/us/%s/used.png?force=1&zero=0&w=725&h=440&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=en" % self.asin
+
+    @property
+    def camel_rank(self):
+
+        import requests
+        from lxml import html
+        page = requests.get('https://secure.camelcamelcamel.com/login?return_to=http%3A%2F%2Fcamelcamelcamel%2Ecom%2F')
+        doc = html.fromstring(page.text)
+        form = doc.xpath(".//form[@id='loginform']")[0]
+        page2 = requests.post(form.action, data={'login': 'schubert.zach@gmail.com', 'password':'VM7R2#b7$Ost'})
+        return "http://charts.camelcamelcamel.com/us/%s/sales-rank.png?force=1&zero=0&w=725&h=440&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=en" % self.asin
+
     class Meta:
         verbose_name = "Amazon Product"
         verbose_name_plural = "Amazon Products"
-        ordering = ("title",)
+        ordering = ("title", )
 
 class AmazonSalesRank(models.Model):
     product = models.ForeignKey(AmazonProduct, on_delete=models.CASCADE)
@@ -328,6 +364,9 @@ class AmazonSalesRank(models.Model):
 
     class Meta:
         unique_together = ('product', 'product_category', 'date')
+        verbose_name = "Sales Rank"
+        verbose_name_plural = "Sales Rankings"
+        ordering = ('-date',)
 
 class AmazonPrice(models.Model):
     # Relations
@@ -358,20 +397,17 @@ class AmazonOffer(models.Model):
     list_display = ('condition', 'price', 'shipping', 'is_fba', 'seller_rating', 'feedback_count')
 
     @staticmethod
-    def fetch(asin, used):
+    def fetch(asin):
         from scrapers.amazon import LowestPricedOffers
-        if isinstance(used, basestring):
-            used = used.lower().startswith('u')
-        used_str = 'used' if used else 'new'
         loader = LowestPricedOffers()
-        data = loader.fetch(asin, used_str)
+        data = loader.fetch(asin)
         product = AmazonProduct.objects.get(asin=asin)
         for row in data['offers']:
             offer = AmazonOffer.objects.get_or_create(
                 product=product,
                 price=cmn.read_num(row['Price']),
                 shipping=cmn.read_num(row['ShippingPrice']),
-                used=used,
+                used=row['SubCondition'] == 'used',
                 condition=row['SubCondition'],
                 is_fba=row['IsFulfilledByAmazon'].lower() == 'true',
                 is_featured_merchant=row['IsFeaturedMerchant'].lower() == 'true',
@@ -383,6 +419,36 @@ class AmazonOffer(models.Model):
 
     class Meta:
         ordering = ('used','condition','price','shipping',)
+
+class AmazonOfferPivot(models.Model):
+    product = models.ForeignKey(AmazonProduct, on_delete=models.CASCADE)
+    new = models.FloatField(null=True, blank=True)
+    like_new = models.FloatField(null=True, blank=True)
+    very_good = models.FloatField(null=True, blank=True)
+    good = models.FloatField(null=True, blank=True)
+    acceptable = models.FloatField(null=True, blank=True)
+    date = models.DateField()
+
+    @staticmethod
+    def update(asin):
+        from django_pandas.io import read_frame
+        import numpy as np
+        qs = AmazonOffer.objects.filter(product_id=asin, date=cmn.today())
+        df = read_frame(qs)[['price','condition']]
+        df['price_rank'] = df.groupby('condition').rank(method='dense')['price']
+        df = df.drop_duplicates()
+        piv = df.pivot(index='price_rank', columns='condition')['price'].fillna(0)
+        for row in piv.to_dict(orient='records'):
+            offer = AmazonOfferPivot.objects.get_or_create(
+                new=row.get('new') or None,
+                like_new=row.get('like new') or None,
+                very_good=row.get('very good') or None,
+                good = row.get('good') or None,
+                acceptable = row.get('acceptable') or None,
+                product_id = asin,
+                date = cmn.today()
+            )[0]
+            offer.save()
 
 
 # class AmazonOffer(models.Model):

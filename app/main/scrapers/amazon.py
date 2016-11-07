@@ -1,8 +1,3 @@
-
-# coding: utf-8
-
-# In[135]:
-
 import requests
 from urllib import urlencode
 from datetime import datetime
@@ -13,6 +8,7 @@ import pytz
 import xmltodict
 import pandas as pd
 from main.common import *
+import numpy as np
 from numpy import atleast_1d
 
 def traverse(xml, path, default=''):
@@ -87,6 +83,9 @@ class ProductFundamentals(AmazonEndpoint):
             sales_rank = atleast_1d(sales_rank)
         else:
             sales_rank = []
+        for ix in range(len(sales_rank)):
+            if sales_rank[ix].get('ProductCategoryId') == 'book_display_on_website':
+                sales_rank[ix]['ProductCategoryId'] = 'Books'
         image_source = traverse(attributes, 'ns2:SmallImage/ns2:URL')
         resized = re.sub('\._.*\.jpg','._SX331_BO1,204,203,200_.jpg',image_source)
         data = dict(
@@ -135,6 +134,7 @@ class LowestPricedOffers(AmazonEndpoint):
             offer['ShipsFromCountry'] = offer['ShipsFromCountry'] or ''
             return offer
 
+        offer['SubCondition'] = re.sub('_',' ', traverse(offer, 'SubCondition'))
         feedback = offer.pop('SellerFeedbackRating')
         offer['SellerFeedbackRating'] = feedback[u'SellerPositiveFeedbackRating']
         offer['FeedbackCount'] = feedback['FeedbackCount']
@@ -170,18 +170,17 @@ class LowestPricedOffers(AmazonEndpoint):
             '@condition': 'Condition',
             '@fulfillmentChannel': 'FulfillmentChannel'
         }, inplace=True)
-        def get_amount(d):
-            try:
-                return d['Amount']
-            except TypeError:
-                return d
-        lowest_prices[['LandedPrice','ListingPrice','Shipping']] = lowest_prices[['LandedPrice','ListingPrice','Shipping']].applymap(get_amount)
+        lowest_prices[['LandedPrice','ListingPrice','Shipping']] = lowest_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
         lowest_prices = lowest_prices.to_dict(orient='records')
 
         buybox_prices = pd.DataFrame(traverse(summary, 'BuyBoxPrices/BuyBoxPrice'))
         buybox_prices.rename(columns={'@condition':'Condition'}, inplace=True)
-        buybox_prices[['LandedPrice','ListingPrice','Shipping']] = buybox_prices[['LandedPrice','ListingPrice','Shipping']].applymap(get_amount)
-        buybox_prices = buybox_prices.to_dict(orient='records')
+        try:
+            buybox_prices = buybox_prices.ix['Amount']
+            buybox_prices = [buybox_prices.to_dict()]
+        except KeyError: # more annoying JSON variation
+            buybox_prices[['LandedPrice','ListingPrice','Shipping']] = buybox_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
+            buybox_prices = buybox_prices.to_dict(orient='records')
 
         buybox_eligible_offers = pd.DataFrame(traverse(summary, 'BuyBoxEligibleOffers/OfferCount'))
         buybox_eligible_offers.rename(columns={
@@ -212,6 +211,12 @@ class LowestPricedOffers(AmazonEndpoint):
         if not raw:
             summary = self.read_summary(summary)
         return dict(offers=offers, summary=summary)
+
+    def fetch(self, asin):
+        data = self.read(self.get(asin, 'used'))
+        new = self.read(self.get(asin, 'new'))
+        data['offers'].extend(new['offers'])
+        return data
 
 class ProductCategoriesForASIN(AmazonEndpoint):
     def get_params(self, asin):
@@ -244,8 +249,34 @@ class ListMatchingProducts(ProductFundamentals):
         params['Query'] = query
         return params
 
+class GetMyFeesEstimate(AmazonEndpoint):
+    def get_params(self, asin, price):
+        params = self.universal_params.copy()
+        params.pop('MarketplaceId')
+        params.update({
+            'Action': 'GetMyFeesEstimate',
+            'FeesEstimateRequestList.FeesEstimateRequest.1.MarketplaceId': 'ATVPDKIKX0DER',
+            'FeesEstimateRequestList.FeesEstimateRequest.1.IdType': 'ASIN',
+            'FeesEstimateRequestList.FeesEstimateRequest.1.IdValue': asin,
+            'FeesEstimateRequestList.FeesEstimateRequest.1.IsAmazonFulfilled': 'false',
+            'FeesEstimateRequestList.FeesEstimateRequest.1.Identifier': 'request1',
+            'FeesEstimateRequestList.FeesEstimateRequest.1.PriceToEstimateFees.ListingPrice.CurrencyCode': 'USD',
+            'FeesEstimateRequestList.FeesEstimateRequest.1.PriceToEstimateFees.ListingPrice.Amount': price,
+            'FeesEstimateRequestList.FeesEstimateRequest.1.PriceToEstimateFees.Shipping.CurrencyCode': 'USD',
+            'FeesEstimateRequestList.FeesEstimateRequest.1.PriceToEstimateFees.Shipping.Amount': '0.00',
+            'FeesEstimateRequestList.FeesEstimateRequest.1.PriceToEstimateFees.Points.PointsNumber': '0',
+        })
+        return params
+
+    def read(self, response):
+        xml = xmltodict.parse(response.text)
+        node = traverse(xml, 'GetMyFeesEstimateResponse/GetMyFeesEstimateResult/FeesEstimateResultList/FeesEstimateResult')
+        amount = read_num(traverse(node, 'FeesEstimate/TotalFeesEstimate/Amount'))
+        return amount
 
 clrs = '0262033844'
 three_body = '0765382032'
 gott = '1594634025'
 foundation = '0553293354'
+chomsky = '0375714499'
+pearls = '0201657880'

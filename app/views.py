@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import main.common as cmn
 from django.shortcuts import render
 from django import http, forms
 from django.views.generic.list import ListView
@@ -6,6 +7,7 @@ from django.views.generic.detail import DetailView
 from django.conf.urls import url, include
 import json
 from main import models
+import numpy as np
 import re
 import sys
 
@@ -160,7 +162,7 @@ def search_amazon(request):
 
     return render(request, 'app/search.html', {'form': form})
 
-class AmazonOfferList(ListView, BookStoreViewMixin):
+class XAmazonOfferList(ListView, BookStoreViewMixin):
     # model = models.AmazonOffer
     # queryset = models.AmazonOffer.objects.filter(product_id=)
     template_name = "generic_list.html"
@@ -173,10 +175,62 @@ class AmazonOfferList(ListView, BookStoreViewMixin):
             return models.AmazonOffer.objects.filter(product_id=pid)
         return models.AmazonOffer.objects.all()
 
+
+class FeeCalculatorForm(forms.Form):
+    asin = forms.CharField(initial='', widget=forms.HiddenInput())
+    price = forms.FloatField(label='', initial=10.00)
+
+def calculate_fees(request):
+    # if this is a POST request we need to process the form data
+    if request.method == 'POST':
+        # create a form instance and populate it with data from the request:
+        form = FeeCalculatorForm(request.POST)
+        # check whether it's valid:
+        if form.is_valid():
+            # process the data in form.cleaned_data as required
+            # ...
+            # redirect to a new URL:
+            price = form.cleaned_data['price']
+            data = form.cleaned_data
+            pd = request.POST
+            asin = request.POST.get('asin')
+            # asin = models.AmazonProduct.fetch(term)
+            from main.scrapers.amazon import GetMyFeesEstimate
+            amount = GetMyFeesEstimate().fetch(asin, float(price))
+            return render(request, 'app/feecalculator.html', {'form': form, 'price': price, 'asin': asin, 'fees': amount})
+            # return http.HttpResponseRedirect('/amazonproducts/%s' % asin)
+
+    # if a GET (or any other method) we'll create a blank form
+    else:
+        form = FeeCalculatorForm(request.GET)
+
+    price = request.GET.get('price')
+    asin = request.GET.get('asin')
+    return render(request, 'app/feecalculator.html', {'form': form, 'price': price, 'asin': asin})
+
+
 class NewAmazonProductDetail(DetailView):
     model = models.AmazonProduct
     template_name = 'app/new_amazon_detail.html'
     list_display = ('title','authors','binding','edition','pages','published')
+    calculator_form = FeeCalculatorForm()
+
+    def fees(self):
+        try:
+            return self.foo
+        except Exception as e:
+            return str(e)
+
+    def header(self):
+        obj = self.get_object()
+        h = "%s by %s" % (obj.title, obj.authors)
+        if obj.edition or obj.binding:
+            h += ', %s' % ' '.join([obj.edition, obj.binding])
+        return h
+
+    def rank(self):
+        r = self.get_object().rank
+        return "{:,.0f}".format(r) if r else '--'
 
     def offer_headers(self):
         return models.AmazonOffer.list_display
@@ -184,15 +238,71 @@ class NewAmazonProductDetail(DetailView):
     def offers(self):
         return models.AmazonOffer.objects.filter(product=self.get_object())
 
+    def offers_pivot(self):
+        from django_pandas.io import read_frame
+        qs = models.AmazonOffer.objects.filter(product=self.get_object())
+        df = read_frame(qs)[['condition','is_fba','price','date']]
+        columns = ['new fba', 'new fbm', 'like new fba', 'like new fbm', 'very good fba', 'very good fbm', 'good fba', 'good fbm', 'acceptable fba', 'acceptable fbm']
+        if df.empty:
+            data = []
+            as_of = '--'
+        else:
+            df['is_fba'] = df.is_fba.map(lambda s: 'fba' if s else 'fbm')
+            as_of = df.date.max()
+            df = df[df.date == as_of].drop('date', axis=1)
+            df['price'] = df.price.astype(np.float)
+            df['price_rank'] = df.groupby(['condition','is_fba']).rank(method='first')
+            piv = df.set_index(['price_rank','condition','is_fba']).unstack(['condition','is_fba'])['price']
+            conditions = ['new','like new','very good','good','acceptable']
+            channels = ['fba','fbm']
+            piv.columns = [' '.join(levels) for levels in piv.columns.values]
+            for cond in conditions:
+                for chan in channels:
+                    col = '%s %s' % (cond, chan)
+                    if col not in piv:
+                        piv[col] = np.nan
+            piv = piv[columns].applymap(cmn.money_f)
+            data = piv.as_matrix()
+        return {'headers': columns, 'data': data, 'as_of': as_of}
+
+    def min_price(self):
+        offers = self.offers()
+        if not offers:
+            return '--'
+        return "${:,.2f}".format(min([o.price for o in offers]))
+
     def meta(self):
         return self.model._meta
 
 
+
 import django_tables2 as tables
+
+class AmazonOffersList(tables.Table):
+    class Meta:
+        model = models.AmazonOffer
+
+class AmazonOffersPivot(tables.Table):
+    class Meta:
+        model = models.AmazonOfferPivot
+        fields = ['new', 'like_new', 'very_good', 'good', 'acceptable']
+
+def offers_list(request):
+    pid = request.GET.get('product_id')
+    if pid:
+        queryset = models.AmazonOfferPivot.objects.filter(product_id=pid)
+    else:
+        queryset = models.AmazonOfferPivot.objects.all()
+    # queryset = models.AmazonSalesRank.objects.all()
+    table = AmazonOffersPivot(queryset)
+    tables.RequestConfig(request, paginate=False).configure(table)
+    return render(request, 'simple_list.html', {'table': table, 'verbose_name': table.Meta.model._meta.verbose_name_plural})
+
 
 class AmazonSalesRankList(tables.Table):
     class Meta:
         model = models.AmazonSalesRank
+        fields = ('rank', 'product_category',)
 
 def sales_rank_list(request):
     pid = request.GET.get('product_id')
@@ -202,5 +312,5 @@ def sales_rank_list(request):
         queryset = models.AmazonSalesRank.objects.all()
     # queryset = models.AmazonSalesRank.objects.all()
     table = AmazonSalesRankList(queryset)
-    tables.RequestConfig(request).configure(table)
-    return render(request, 'simple_list.html', {'table': table})
+    tables.RequestConfig(request, paginate=False).configure(table)
+    return render(request, 'simple_list.html', {'table': table, 'verbose_name': table.Meta.model._meta.verbose_name_plural})

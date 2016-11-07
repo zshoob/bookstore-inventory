@@ -30,8 +30,9 @@ urlpatterns = [
     # url(r'^amazonproducts/fetch/(?P<asin>\w+)', views.fetch_from_amazon),
     url(r'^amazonproducts/(?P<pk>\w+)', views.NewAmazonProductDetail.as_view(), name='amazon-product'),
     url(r'^amazonproducts/', views.AmazonProductList.as_view(), name='amazon-products'),
-    url(r'^amazonoffers/', views.AmazonOfferList.as_view(), name='amazon-offers'),
+    url(r'^amazonoffers/', views.offers_list, name='amazon-offers'),
     url(r'^salesranks/', views.sales_rank_list, name='sales-ranks'),
     url(r'^accounts/', include('allauth.urls')),
     url('search/', views.search_amazon, name='search'),
+    url('feecalculator/', views.calculate_fees, name='feecalculator'),
 ]

@@ -1,5 +1,6 @@
 import dateutil
 import re
+import numpy as np
 
 def today():
     import datetime
@@ -26,6 +27,11 @@ def read_num(s):
         return float(n[0])
     except IndexError, ValueError:
         return None
+
+def money_f(f):
+    if (f is np.nan) or not read_num(f):
+        return '--'
+    return "${:,.2f}".format(read_num(f))
 
 def parse_authors(s):
     from nameparser.parser import HumanName

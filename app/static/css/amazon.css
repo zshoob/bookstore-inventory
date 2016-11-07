@@ -1,0 +1,7 @@
+tr:nth-child(even) {
+    background-color: #ffffff;
+}
+
+td:nth-child(even) {
+    background-color: #dddddd;
+}
