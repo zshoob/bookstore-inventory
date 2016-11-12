@@ -1,0 +1,12 @@
+#!/bin/bash
+# This hook is sourced after this virtualenv is activated.
+
+export PROJECT_HOME=$HOME/book_project
+
+export PYTHONPATH=$PROJECT_HOME/app:
+
+export DJANGO_SETTINGS_MODULE="app.settings.development"
+
+export DATABASE_NAME='bookapp_db'
+export DATABASE_USER='master'
+export DATABASE_PASSWORD='DoNotPasteTheActualPasswordHere'

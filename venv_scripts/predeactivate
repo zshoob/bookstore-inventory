@@ -1,0 +1,8 @@
+#!/bin/bash
+# This hook is sourced before this virtualenv is deactivated.
+
+unset DJANGO_SETTINGS_MODULE
+
+unset DATABASE_NAME
+unset DATABASE_USER
+unset DATABASE_PASSWORD

@@ -23,8 +23,6 @@
   </div>
   <div style="float:left;width:55%;margin-left:2%;margin-top:2%;">
     <p style="font-size:16px;">{{ object.title }}</p>
-    {{ view.foo }}
-    {{ view.fees }}
   </div>
   <div style="float:left;width:55%;margin-left:2%;">
     <p>{{ object.authors }}</p>
@@ -46,6 +44,7 @@
   </div>
 </div>
 <div style="float:left;width:96%; margin-left: 2%;margin-right:2%;">
+  <!-- <iframe src="/feecalculator?asin={{object.asin}}&price=199" style="width:50%"</iframe> -->
   as of {{ view.offers_pivot.as_of }}
   <table style="font-size:12px;">
     <thead>
@@ -64,24 +63,5 @@
     {% endfor %}
   </table>
 </div>
-
-<iframe src="/feecalculator?asin={{object.asin}}&price=199" style="width:50%"</iframe>
-
-<!--
-<div class="right-column" style="float:left;width:75%;margin-right=0%">
-  <table style="width:100%">
-  {% for col in view.list_display %}
-  <tr>
-    <td>{{ col|upper }}</td>
-    <td>{{ object | get_field:col }}</td>
-  </tr>
-  {% endfor %}
-  </table>
-</div>
- -->
-
-<!-- <iframe src="/salesranks?product_id={{object.asin}}" style="width:50%"</iframe> -->
-<!-- <iframe src="/amazonoffers?product_id={{object.asin}}" style="width:50%"</iframe> -->
-<!-- <iframe src="/amazonoffers?product_id={{object.asin}}" style="width:100%"</iframe> -->
 
 {% endblock %}
