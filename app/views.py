@@ -242,7 +242,8 @@ class NewAmazonProductDetail(DetailView):
         from django_pandas.io import read_frame
         qs = models.AmazonOffer.objects.filter(product=self.get_object())
         df = read_frame(qs)[['condition','is_fba','price','date']]
-        columns = ['new fba', 'new fbm', 'like new fba', 'like new fbm', 'very good fba', 'very good fbm', 'good fba', 'good fbm', 'acceptable fba', 'acceptable fbm']
+        # columns = ['new fba', 'new fbm', 'like new fba', 'like new fbm', 'very good fba', 'very good fbm', 'good fba', 'good fbm', 'acceptable fba', 'acceptable fbm']
+        columns = ['acceptable fba', 'acceptable fbm', 'good fba', 'good fbm', 'very good fba', 'very good fbm', 'like new fba', 'like new fbm', 'new fba', 'new fbm']
         if df.empty:
             data = []
             as_of = '--'
@@ -253,7 +254,8 @@ class NewAmazonProductDetail(DetailView):
             df['price'] = df.price.astype(np.float)
             df['price_rank'] = df.groupby(['condition','is_fba']).rank(method='first')
             piv = df.set_index(['price_rank','condition','is_fba']).unstack(['condition','is_fba'])['price']
-            conditions = ['new','like new','very good','good','acceptable']
+            # conditions = ['new','like new','very good','good','acceptable']
+            conditions = ['acceptable', 'good', 'very good', 'like new', 'new']
             channels = ['fba','fbm']
             piv.columns = [' '.join(levels) for levels in piv.columns.values]
             for cond in conditions:
