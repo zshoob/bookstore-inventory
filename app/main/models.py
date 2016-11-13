@@ -256,6 +256,7 @@ class AmazonProduct(models.Model):
     @staticmethod
     def fetch(asin):
         from scrapers.amazon import ProductFundamentals, ListMatchingProducts
+        asin = asin.split('-')[-1]
         results = ListMatchingProducts().fetch(asin)
         for result in results:
             product = AmazonProduct(

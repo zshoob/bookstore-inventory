@@ -157,38 +157,46 @@ class LowestPricedOffers(AmazonEndpoint):
         list_price = traverse(summary, 'ListPrice/Amount')
         total_offer_count = traverse(summary, 'TotalOfferCount')
 
-        number_of_offers = pd.DataFrame(traverse(summary, 'NumberOfOffers/OfferCount'))
-        number_of_offers.rename(columns={
-            '#text': 'NumberOfOffers',
-            '@condition': 'Condition',
-            '@fulfillmentChannel': 'FulfillmentChannel'
-        }, inplace=True)
-        number_of_offers = number_of_offers.to_dict(orient='records')
+        number_of_offers = traverse(summary, 'NumberOfOffers/OfferCount', [])
+        if number_of_offers:
+            number_of_offers = pd.DataFrame(number_of_offers)
+            number_of_offers.rename(columns={
+                '#text': 'NumberOfOffers',
+                '@condition': 'Condition',
+                '@fulfillmentChannel': 'FulfillmentChannel'
+            }, inplace=True)
+            number_of_offers = number_of_offers.to_dict(orient='records')
 
-        lowest_prices = pd.DataFrame(traverse(summary, 'LowestPrices/LowestPrice'))
-        lowest_prices.rename(columns={
-            '@condition': 'Condition',
-            '@fulfillmentChannel': 'FulfillmentChannel'
-        }, inplace=True)
-        lowest_prices[['LandedPrice','ListingPrice','Shipping']] = lowest_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
-        lowest_prices = lowest_prices.to_dict(orient='records')
+        lowest_prices = traverse(summary, 'LowestPrices/LowestPrice', [])
+        if lowest_prices:
+            lowest_prices = pd.DataFrame(lowest_prices)
+            lowest_prices.rename(columns={
+                '@condition': 'Condition',
+                '@fulfillmentChannel': 'FulfillmentChannel'
+            }, inplace=True)
+            lowest_prices[['LandedPrice','ListingPrice','Shipping']] = lowest_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
+            lowest_prices = lowest_prices.to_dict(orient='records')
 
-        buybox_prices = pd.DataFrame(traverse(summary, 'BuyBoxPrices/BuyBoxPrice'))
-        buybox_prices.rename(columns={'@condition':'Condition'}, inplace=True)
-        try:
-            buybox_prices = buybox_prices.ix['Amount']
-            buybox_prices = [buybox_prices.to_dict()]
-        except KeyError: # more annoying JSON variation
-            buybox_prices[['LandedPrice','ListingPrice','Shipping']] = buybox_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
-            buybox_prices = buybox_prices.to_dict(orient='records')
+        buybox_prices = traverse(summary, 'BuyBoxPrices/BuyBoxPrice', [])
+        if buybox_prices:
+            buybox_prices = pd.DataFrame(buybox_prices)
+            buybox_prices.rename(columns={'@condition':'Condition'}, inplace=True)
+            try:
+                buybox_prices = buybox_prices.ix['Amount']
+                buybox_prices = [buybox_prices.to_dict()]
+            except KeyError: # more annoying JSON variation
+                buybox_prices[['LandedPrice','ListingPrice','Shipping']] = buybox_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
+                buybox_prices = buybox_prices.to_dict(orient='records')
 
-        buybox_eligible_offers = pd.DataFrame(traverse(summary, 'BuyBoxEligibleOffers/OfferCount'))
-        buybox_eligible_offers.rename(columns={
-            '#text': 'NumberOfOffers',
-            '@condition': 'Condition',
-            '@fulfillmentChannel': 'FulfillmentChannel'
-        }, inplace=True)
-        buybox_eligible_offers = buybox_eligible_offers.to_dict(orient='records')
+        buybox_eligible_offers = traverse(summary, 'BuyBoxEligibleOffers/OfferCount', [])
+        if buybox_eligible_offers:
+            buybox_eligible_offers = pd.DataFrame(buybox_eligible_offers)
+            buybox_eligible_offers.rename(columns={
+                '#text': 'NumberOfOffers',
+                '@condition': 'Condition',
+                '@fulfillmentChannel': 'FulfillmentChannel'
+            }, inplace=True)
+            buybox_eligible_offers = buybox_eligible_offers.to_dict(orient='records')
 
         data = dict(
             list_price=list_price,
