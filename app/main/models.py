@@ -254,11 +254,17 @@ class AmazonProduct(models.Model):
     image_source = models.CharField(max_length=100, null=True)
 
     @staticmethod
-    def fetch(asin):
+    def fetch(query):
         from scrapers.amazon import ProductFundamentals, ListMatchingProducts
-        asin = asin.split('-')[-1]
-        results = ListMatchingProducts().fetch(asin)
+        # asin = asin.strip().split('-')[-1]
+        # if len(asin) == 13 and asin.startswith('978'):
+        #     asin = asin[3:]
+        first_asin = None
+        results = ListMatchingProducts().fetch(query)
         for result in results:
+            asin = result.get('asin')
+            if not first_asin:
+                first_asin = asin
             product = AmazonProduct(
                 asin=result.get('asin'),
                 title=result.get('title'),
