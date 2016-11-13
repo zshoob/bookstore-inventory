@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[175]:
+# In[212]:
 
 import requests
 from urllib import urlencode
@@ -187,6 +187,8 @@ class LowestPricedOffers(AmazonEndpoint):
 
         buybox_prices = traverse(summary, 'BuyBoxPrices/BuyBoxPrice', [])
         if buybox_prices:
+            if isinstance(buybox_prices, collections.OrderedDict):
+                buybox_prices = [buybox_prices]
             buybox_prices = pd.DataFrame(buybox_prices, index=range(len(buybox_prices)))
             buybox_prices.rename(columns={'@condition':'Condition'}, inplace=True)
             try:
@@ -198,6 +200,8 @@ class LowestPricedOffers(AmazonEndpoint):
                 
         buybox_eligible_offers = traverse(summary, 'BuyBoxEligibleOffers/OfferCount', [])
         if buybox_eligible_offers:
+            if isinstance(buybox_eligible_offers, collections.OrderedDict):
+                buybox_eligible_offers = [buybox_eligible_offers]
             buybox_eligible_offers = pd.DataFrame(buybox_eligible_offers, index=range(len(buybox_eligible_offers)))
             buybox_eligible_offers.rename(columns={
                 '#text': 'NumberOfOffers',
