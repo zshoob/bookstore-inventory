@@ -259,12 +259,9 @@ class AmazonProduct(models.Model):
         # asin = asin.strip().split('-')[-1]
         # if len(asin) == 13 and asin.startswith('978'):
         #     asin = asin[3:]
-        first_asin = None
         results = ListMatchingProducts().fetch(query)
         for result in results:
             asin = result.get('asin')
-            if not first_asin:
-                first_asin = asin
             product = AmazonProduct(
                 asin=result.get('asin'),
                 title=result.get('title'),
@@ -315,8 +312,11 @@ class AmazonProduct(models.Model):
                     last_name=author_dict['last']
                 )
                 product.author_set.add(author)
-        AmazonOffer.fetch(asin)
-        return results and results[0].get('asin')
+        first_asin = results and results[0].get('asin')
+        if first_asin:
+            AmazonOffer.fetch(first_asin)
+        return first_asin
+
 
     def __str__(self):
         return self.title

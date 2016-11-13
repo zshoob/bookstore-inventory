@@ -1,3 +1,8 @@
+
+# coding: utf-8
+
+# In[175]:
+
 import requests
 from urllib import urlencode
 from datetime import datetime
@@ -10,6 +15,7 @@ import pandas as pd
 from main.common import *
 import numpy as np
 from numpy import atleast_1d
+import collections
 
 def traverse(xml, path, default=''):
     for node in path.split('/'):
@@ -85,7 +91,7 @@ class ProductFundamentals(AmazonEndpoint):
             sales_rank = []
         for ix in range(len(sales_rank)):
             if sales_rank[ix].get('ProductCategoryId') == 'book_display_on_website':
-                sales_rank[ix]['ProductCategoryId'] = 'Books'
+                sales_rank[ix]['ProductCategoryId'] = 'Books'            
         image_source = traverse(attributes, 'ns2:SmallImage/ns2:URL')
         resized = re.sub('\._.*\.jpg','._SX331_BO1,204,203,200_.jpg',image_source)
         data = dict(
@@ -159,7 +165,7 @@ class LowestPricedOffers(AmazonEndpoint):
 
         number_of_offers = traverse(summary, 'NumberOfOffers/OfferCount', [])
         if number_of_offers:
-            number_of_offers = pd.DataFrame(number_of_offers)
+            number_of_offers = pd.DataFrame(number_of_offers, index=range(len(number_of_offers)))
             number_of_offers.rename(columns={
                 '#text': 'NumberOfOffers',
                 '@condition': 'Condition',
@@ -169,7 +175,9 @@ class LowestPricedOffers(AmazonEndpoint):
 
         lowest_prices = traverse(summary, 'LowestPrices/LowestPrice', [])
         if lowest_prices:
-            lowest_prices = pd.DataFrame(lowest_prices)
+            if isinstance(lowest_prices, collections.OrderedDict):
+                lowest_prices = [lowest_prices]
+            lowest_prices = pd.DataFrame(lowest_prices, index=range(len(lowest_prices)))
             lowest_prices.rename(columns={
                 '@condition': 'Condition',
                 '@fulfillmentChannel': 'FulfillmentChannel'
@@ -179,7 +187,7 @@ class LowestPricedOffers(AmazonEndpoint):
 
         buybox_prices = traverse(summary, 'BuyBoxPrices/BuyBoxPrice', [])
         if buybox_prices:
-            buybox_prices = pd.DataFrame(buybox_prices)
+            buybox_prices = pd.DataFrame(buybox_prices, index=range(len(buybox_prices)))
             buybox_prices.rename(columns={'@condition':'Condition'}, inplace=True)
             try:
                 buybox_prices = buybox_prices.ix['Amount']
@@ -187,17 +195,17 @@ class LowestPricedOffers(AmazonEndpoint):
             except KeyError: # more annoying JSON variation
                 buybox_prices[['LandedPrice','ListingPrice','Shipping']] = buybox_prices[['LandedPrice','ListingPrice','Shipping']].applymap(lambda d: d['Amount'])
                 buybox_prices = buybox_prices.to_dict(orient='records')
-
+                
         buybox_eligible_offers = traverse(summary, 'BuyBoxEligibleOffers/OfferCount', [])
         if buybox_eligible_offers:
-            buybox_eligible_offers = pd.DataFrame(buybox_eligible_offers)
+            buybox_eligible_offers = pd.DataFrame(buybox_eligible_offers, index=range(len(buybox_eligible_offers)))
             buybox_eligible_offers.rename(columns={
                 '#text': 'NumberOfOffers',
                 '@condition': 'Condition',
                 '@fulfillmentChannel': 'FulfillmentChannel'
             }, inplace=True)
             buybox_eligible_offers = buybox_eligible_offers.to_dict(orient='records')
-
+                
         data = dict(
             list_price=list_price,
             total_offer_count=total_offer_count,
@@ -208,11 +216,11 @@ class LowestPricedOffers(AmazonEndpoint):
         )
 
         return data
-
+    
     def read(self, response, raw=False):
         xml = xmltodict.parse(response.text)
         xml = traverse(xml, 'GetLowestPricedOffersForASINResponse/GetLowestPricedOffersForASINResult')
-        offers = atleast_1d(traverse(xml, 'Offers/Offer'))
+        offers = traverse(xml, 'Offers/Offer', [])
         if not raw:
             offers = [self.read_offer(o) for o in offers]
         summary = traverse(xml, 'Summary')
@@ -225,19 +233,19 @@ class LowestPricedOffers(AmazonEndpoint):
         new = self.read(self.get(asin, 'new'))
         data['offers'].extend(new['offers'])
         return data
-
+    
 class ProductCategoriesForASIN(AmazonEndpoint):
     def get_params(self, asin):
         params = self.universal_params.copy()
         params['Action'] = 'GetProductCategoriesForASIN'
         params['ASIN'] = asin
         return params
-
+    
     def read(self, response):
         xml = xmltodict.parse(response.text)
         categories = []
         lists = atleast_1d(traverse(xml, 'GetProductCategoriesForASINResponse/GetProductCategoriesForASINResult/Self'))
-        for prev in lists:
+        for prev in lists:    
             node = traverse(prev, 'Parent')
             while node:
                 prev['Parent'] = node['ProductCategoryId']
@@ -256,7 +264,7 @@ class ListMatchingProducts(ProductFundamentals):
         params['QueryContextId'] = 'Books'
         params['Query'] = query
         return params
-
+    
 class GetMyFeesEstimate(AmazonEndpoint):
     def get_params(self, asin, price):
         params = self.universal_params.copy()
@@ -274,17 +282,18 @@ class GetMyFeesEstimate(AmazonEndpoint):
             'FeesEstimateRequestList.FeesEstimateRequest.1.PriceToEstimateFees.Shipping.Amount': '0.00',
             'FeesEstimateRequestList.FeesEstimateRequest.1.PriceToEstimateFees.Points.PointsNumber': '0',
         })
-        return params
-
+        return params    
+    
     def read(self, response):
         xml = xmltodict.parse(response.text)
         node = traverse(xml, 'GetMyFeesEstimateResponse/GetMyFeesEstimateResult/FeesEstimateResultList/FeesEstimateResult')
         amount = read_num(traverse(node, 'FeesEstimate/TotalFeesEstimate/Amount'))
         return amount
-
+    
 clrs = '0262033844'
 three_body = '0765382032'
 gott = '1594634025'
 foundation = '0553293354'
 chomsky = '0375714499'
 pearls = '0201657880'
+
