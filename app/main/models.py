@@ -348,13 +348,12 @@ class AmazonProduct(models.Model):
 
     @property
     def camel_rank(self):
-
-        import requests
-        from lxml import html
-        page = requests.get('https://secure.camelcamelcamel.com/login?return_to=http%3A%2F%2Fcamelcamelcamel%2Ecom%2F')
-        doc = html.fromstring(page.text)
-        form = doc.xpath(".//form[@id='loginform']")[0]
-        page2 = requests.post(form.action, data={'login': 'schubert.zach@gmail.com', 'password':'VM7R2#b7$Ost'})
+        # import requests
+        # from lxml import html
+        # page = requests.get('https://secure.camelcamelcamel.com/login?return_to=http%3A%2F%2Fcamelcamelcamel%2Ecom%2F')
+        # doc = html.fromstring(page.text)
+        # form = doc.xpath(".//form[@id='loginform']")[0]
+        # page2 = requests.post(form.action, data={'login': 'schubert.zach@gmail.com', 'password':'VM7R2#b7$Ost'})
         return "http://charts.camelcamelcamel.com/us/%s/sales-rank.png?force=1&zero=0&w=725&h=440&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=en" % self.asin
 
     class Meta:
