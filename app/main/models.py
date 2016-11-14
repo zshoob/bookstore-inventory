@@ -311,9 +311,11 @@ class AmazonProduct(models.Model):
                 author_dict = cmn.parse_authors(author_str)[0]
                 author, _ = Author.objects.get_or_create(
                     first_name=author_dict['first'],
-                    middle_name=author_dict['middle'],
                     last_name=author_dict['last']
                 )
+                if author_dict['middle'] and not author.middle_name:
+                    author.middle_name = author_dict['middle']
+                author.save()
                 product.author_set.add(author)
         if asins:
             AmazonOffer.fetch(asins[0])
@@ -355,6 +357,10 @@ class AmazonProduct(models.Model):
         # form = doc.xpath(".//form[@id='loginform']")[0]
         # page2 = requests.post(form.action, data={'login': 'schubert.zach@gmail.com', 'password':'VM7R2#b7$Ost'})
         return "http://charts.camelcamelcamel.com/us/%s/sales-rank.png?force=1&zero=0&w=725&h=440&desired=false&legend=1&ilt=1&tp=all&fo=0&lang=en" % self.asin
+
+    @property
+    def amazon_link(self):
+        return "https://www.amazon.com/dp/%s" % self.asin
 
     class Meta:
         verbose_name = "Amazon Product"
