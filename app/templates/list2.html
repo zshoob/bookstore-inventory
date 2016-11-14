@@ -1,0 +1,16 @@
+{% extends "datatable.html" %}
+{% load staticfiles %}
+{% load datatable %}
+{% load django_tables2 %}
+
+{% block head_title %}Amazon Products{% endblock %}
+{% block nav_title %}Amazon Products{% endblock %}
+
+
+{% block body_css %}
+<link rel="stylesheet" type="text/css" href="{% static 'css/datatable.css' %}" />
+{% endblock %}
+
+{% block content %}
+{% render_table table %}
+{% endblock %}

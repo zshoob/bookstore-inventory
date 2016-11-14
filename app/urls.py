@@ -13,6 +13,7 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
+
 from django.conf.urls import url, include
 from django.contrib import admin
 import views
@@ -29,7 +30,7 @@ urlpatterns = [
     url(r'^ebaylistings/', views.EbayListingList.as_view(), name='ebay-listings'),
     # url(r'^amazonproducts/fetch/(?P<asin>\w+)', views.fetch_from_amazon),
     url(r'^amazonproducts/(?P<pk>\w+)', views.NewAmazonProductDetail.as_view(), name='amazon-product'),
-    url(r'^amazonproducts/', views.AmazonProductList.as_view(), name='amazon-products'),
+    url(r'^amazonproducts/', views.amazon_products, name='amazon-products'),
     url(r'^amazonoffers/', views.offers_list, name='amazon-offers'),
     url(r'^salesranks/', views.sales_rank_list, name='sales-ranks'),
     url(r'^accounts/', include('allauth.urls')),

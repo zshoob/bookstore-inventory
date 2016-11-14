@@ -153,7 +153,10 @@ def search_amazon(request):
             # ...
             # redirect to a new URL:
             term = form.cleaned_data['term']
-            asin = models.AmazonProduct.fetch(term)
+            asins = models.AmazonProduct.fetch(term)
+            if asins:
+                asins = ["asin%i=%s" % (ix, asin) for ix, asin in enumerate(asins)]
+                return http.HttpResponseRedirect('/amazonproducts/?%s' % '&'.join(asins))
             return http.HttpResponseRedirect('/amazonproducts/%s' % asin)
 
     # if a GET (or any other method) we'll create a blank form
@@ -312,7 +315,23 @@ def sales_rank_list(request):
         queryset = models.AmazonSalesRank.objects.filter(product_id=pid)
     else:
         queryset = models.AmazonSalesRank.objects.all()
-    # queryset = models.AmazonSalesRank.objects.all()
     table = AmazonSalesRankList(queryset)
     tables.RequestConfig(request, paginate=False).configure(table)
     return render(request, 'simple_list.html', {'table': table, 'verbose_name': table.Meta.model._meta.verbose_name_plural})
+
+class NewAmazonProductList(tables.Table):
+    asin = tables.TemplateColumn('<a href="/amazonproducts/{{record.asin}}">{{record.asin}}</a>')
+    class Meta:
+        model = models.AmazonProduct
+        fields = ('asin','title','authors','binding',)
+        
+
+def amazon_products(request):
+    asins = [request.GET.get('asin%i' % i) for i in range(100) if request.GET.get('asin%i' % i)]
+    if asins:
+        queryset = models.AmazonProduct.objects.filter(pk__in=asins)
+    else:
+        queryset = models.AmazonProduct.objects.all()
+    table = NewAmazonProductList(queryset)
+    tables.RequestConfig(request, paginate=False).configure(table)
+    return render(request, 'list2.html', {'table': table, 'verbose_name': table.Meta.model._meta.verbose_name_plural})
