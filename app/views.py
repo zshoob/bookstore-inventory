@@ -155,9 +155,11 @@ def search_amazon(request):
             term = form.cleaned_data['term']
             asins = models.AmazonProduct.fetch(term)
             if asins:
+                if len(asins) == 1:
+                    return http.HttpResponseRedirect('/amazonproducts/%s' % asins[0])
                 asins = ["asin%i=%s" % (ix, asin) for ix, asin in enumerate(asins)]
                 return http.HttpResponseRedirect('/amazonproducts/?%s' % '&'.join(asins))
-            return http.HttpResponseRedirect('/amazonproducts/%s' % asin)
+            return http.HttpResponseRedirect('/amazonproducts/')
 
     # if a GET (or any other method) we'll create a blank form
     else:
@@ -324,7 +326,7 @@ class NewAmazonProductList(tables.Table):
     class Meta:
         model = models.AmazonProduct
         fields = ('asin','title','authors','binding',)
-        
+
 
 def amazon_products(request):
     asins = [request.GET.get('asin%i' % i) for i in range(100) if request.GET.get('asin%i' % i)]
