@@ -266,7 +266,7 @@ class ListMatchingProducts(ProductFundamentals):
         params = self.universal_params.copy()
         params['Action'] = 'ListMatchingProducts'
         params['QueryContextId'] = 'Books'
-        params['Query'] = query
+        params['Query'] = re.sub(' ','+',query)
         return params
 
 class GetMyFeesEstimate(AmazonEndpoint):
