@@ -181,15 +181,15 @@ class XAmazonOfferList(ListView, BookStoreViewMixin):
         return models.AmazonOffer.objects.all()
 
 
-class FeeCalculatorForm(forms.Form):
+class ProfitCalculatorForm(forms.Form):
     asin = forms.CharField(initial='', widget=forms.HiddenInput())
     price = forms.FloatField(label='', initial=10.00)
 
-def calculate_fees(request):
+def calculate_profits(request):
     # if this is a POST request we need to process the form data
     if request.method == 'POST':
         # create a form instance and populate it with data from the request:
-        form = FeeCalculatorForm(request.POST)
+        form = ProfitCalculatorForm(request.POST)
         # check whether it's valid:
         if form.is_valid():
             # process the data in form.cleaned_data as required
@@ -202,23 +202,24 @@ def calculate_fees(request):
             # asin = models.AmazonProduct.fetch(term)
             from main.scrapers.amazon import GetMyFeesEstimate
             amount = GetMyFeesEstimate().fetch(asin, float(price))
-            return render(request, 'app/feecalculator.html', {'form': form, 'price': price, 'asin': asin, 'fees': amount})
+            profit = price - (amount + 2.09)
+            return render(request, 'app/profitcalculator.html', {'form': form, 'price': price, 'asin': asin, 'profit': profit})
             # return http.HttpResponseRedirect('/amazonproducts/%s' % asin)
 
     # if a GET (or any other method) we'll create a blank form
     else:
-        form = FeeCalculatorForm(request.GET)
+        form = ProfitCalculatorForm(request.GET)
 
     price = request.GET.get('price')
     asin = request.GET.get('asin')
-    return render(request, 'app/feecalculator.html', {'form': form, 'price': price, 'asin': asin})
+    return render(request, 'app/profitcalculator.html', {'form': form, 'price': price, 'asin': asin})
 
 
 class NewAmazonProductDetail(DetailView):
     model = models.AmazonProduct
     template_name = 'app/new_amazon_detail.html'
     list_display = ('title','authors','binding','edition','pages','published')
-    calculator_form = FeeCalculatorForm()
+    calculator_form = ProfitCalculatorForm()
 
     def fees(self):
         try:

@@ -1,0 +1,7 @@
+<form action="/profitcalculator/" method="post">
+  {% csrf_token %}
+  {{ form }}
+  <!-- <input id="asin" type="hidden" value={{asin}}></input> -->
+  <input type="submit" value="Calculate Profit: "></input>
+  {{ profit }}
+</form>

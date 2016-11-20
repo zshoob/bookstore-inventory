@@ -35,5 +35,5 @@ urlpatterns = [
     url(r'^salesranks/', views.sales_rank_list, name='sales-ranks'),
     url(r'^accounts/', include('allauth.urls')),
     url('search/', views.search_amazon, name='search'),
-    url('feecalculator/', views.calculate_fees, name='feecalculator'),
+    url('profitcalculator/', views.calculate_profits, name='profitcalculator'),
 ]
