@@ -27,10 +27,10 @@ def scrape(book_limit=None, pause=1, sort='relevant', ascending=False, to_csv=''
         table.insert(row)
         if to_csv and itr % 1000 == 0:
             df = pd.DataFrame(list(table.all())).set_index('id')
-            df.to_csv(to_csv)        
+            df.to_csv(to_csv, encoding='utf-8')        
     df = pd.DataFrame(list(table.all())).set_index('id')
     if to_csv:
-        df.to_csv(to_csv)
+        df.to_csv(to_csv, encoding='utf-8')
     return df
 
 def fetch_amazon_data(isbn_10):
